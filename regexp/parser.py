@@ -112,12 +112,12 @@ class Parser(object):
                             nodes.append(res)
                             return True
                     elif self.parse_char("?"):
-                        res = types.VariableConditionType(name)
+                        res = types.VariableConditionType(name.pop())
                         if parse_content(":", res.if_set) and parse_content("}", res.if_not_set):
                             nodes.append(res)
                             return True
                     elif self.parse_char("/"):
-                        res = types.VariableChangeType(name, types.transform['kNone'] )
+                        res = types.VariableChangeType(name.pop(), types.transform['kNone'] )
                         while self.source[self.it - 1] == '/':
                             option = []
                             if self.parse_until("/}", option):
