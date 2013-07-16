@@ -32,9 +32,9 @@ class Parser(object):
     def parse_int(self, res):
         if self.it == self.last or not self.source[self.it].isdigit():
             return False
-        res.append(0)
+        res.append("")
         while self.it != self.last and self.source[self.it].isdigit():
-            res[0] = (res[0] * 10) + int(self.source[self.it])
+            res[0] += self.source[self.it]
             self.it += 1
         return True
 
@@ -227,23 +227,23 @@ class Parser(object):
                     if self.parse_snippet("}", res.content):
                         nodes.append(res)
                         return True
-                    elif self.parse_char("/"):
-                        regexp = []
-                        res = types.PlaceholderTransformType( index.pop() )
-                        if self.parse_until("/", regexp) and self.parse_format_string("/", res.format) and self.parse_regexp_options(res.options) and self.parse_char("}"):
-                            res.pattern = compileRegexp(regexp.pop(), res.options)
-                            nodes.append(res)
-                            return True
-                    elif self.parse_char("|"):
-                        res = PlaceholderChoiceType( index.pop() )
-                        while self.parse_format_string(",|", res.choices) and self.source[self.it - 1] == ',':
-                            pass
-                        if self.source[self.it - 1] == '|' and self.parse_char("}"):
-                            nodes.append(res)
-                            return True
-                    elif self.parse_char("}"):
-                        nodes.append(types.PlaceholderType(index.pop()))
+                elif self.parse_char("/"):
+                    regexp = []
+                    res = types.PlaceholderTransformType( index.pop() )
+                    if self.parse_until("/", regexp) and self.parse_format_string("/", res.format) and self.parse_regexp_options(res.options) and self.parse_char("}"):
+                        res.pattern = compileRegexp(regexp.pop(), res.options)
+                        nodes.append(res)
                         return True
+                elif self.parse_char("|"):
+                    res = types.PlaceholderChoiceType( index.pop() )
+                    while self.parse_format_string(",|", res.choices) and self.source[self.it - 1] == ',':
+                        pass
+                    if self.source[self.it - 1] == '|' and self.parse_char("}"):
+                        nodes.append(res)
+                        return True
+                elif self.parse_char("}"):
+                    nodes.append(types.PlaceholderType(index.pop()))
+                    return True
             elif self.parse_int(index):
                 nodes.append(types.PlaceholderType(index.pop()))
                 return True;

@@ -46,6 +46,11 @@ class VariableType(object):
     def __str__(self):
         return "$" + six.text_type(self.name)
     
+    def replace(self, processor, placeholders, match, memo):
+        if self.name.isdigit():
+            return match.groups()[int(self.name) - 1]
+        return self.name
+
     __unicode__ = __str__
 
 #struct variable_condition_t { std::string name; nodes_t if_set, if_not_set; WATCH_LEAKS(parser::variable_condition_t); };
@@ -55,15 +60,14 @@ class VariableConditionType(object):
         self.if_set = []
         self.if_not_set = []
 
-    def apply(self, match):
+    def replace(self, processor, placeholders, match, memo):
         grps = match.groups()
-        index = self.name - 1
-        if len(grps) > index and grps[index] is not None:
-            return self.if_set
-        return self.if_not_set
+        index = int(self.name) - 1
+        nodes = self.if_set if len(grps) > index and grps[index] is not None else self.if_not_set
+        return "".join([node.replace(processor, placeholders, match, memo) for node in nodes])
 
     def __str__(self):
-        cnd = "(?%d:" % self.name
+        cnd = "(?%s:" % self.name
         for cmps in self.if_set:
             if isinstance(cmps, six.integer_types):
                 cnd += CASE_CHARS[cmps]
@@ -167,6 +171,9 @@ class TextType(object):
     def __str__(self):
         return self.text
     
+    def replace(self, processor, placeholders, match, memo):
+        return self.text
+
     __unicode__ = __str__
     
 #struct placeholder_t { size_t index; nodes_t content; WATCH_LEAKS(parser::placeholder_t); };
@@ -181,6 +188,16 @@ class PlaceholderType(object):
         else:
             return "$%s" % self.index
     
+    def replace(self, processor, placeholders, match, memo):
+        if self.index in memo:
+            return memo[self.index]
+        elif placeholders[self.index] != self:
+            #Mirror
+            return placeholders[self.index].replace(processor, placeholders, match, memo)
+        else:
+            return "".join([node.replace(processor, placeholders, match, memo)
+                for node in self.content ])
+
     __unicode__ = __str__
     
 #struct placeholder_choice_t { size_t index; std::vector<nodes_t> choices; WATCH_LEAKS(parser::placeholder_choice_t); };
@@ -192,6 +209,10 @@ class PlaceholderChoiceType(object):
     def __str__(self):
         return "${%s:%s}" % (self.index, "|".join(self.choices))
     
+    def replace(self, processor, placeholders, match, memo):
+        index = self.index in memo and memo[self.index] or 0
+        return self.choices[index].replace(processor, placeholders, match, memo)
+
     __unicode__ = __str__
     
 #struct placeholder_transform_t { size_t index; regexp::pattern_t pattern; nodes_t format; regexp_options::type options; WATCH_LEAKS(parser::placeholder_transform_t); };
@@ -208,6 +229,9 @@ class PlaceholderTransformType(object):
             "".join([ str(frmt) for frmt in self.format]),
             "".join(self.options))
     
+    def replace(self, processor, placeholders, match, memo):
+        return str(self)
+
     __unicode__ = __str__
 
 #struct variable_fallback_t { std::string name; nodes_t fallback; WATCH_LEAKS(parser::variable_fallback_t); };
@@ -215,6 +239,9 @@ class VariableFallbackType(object):
     def __init__(self, name):
         self.name = name
         self.fallback = []
+    
+    def replace(self, processor, placeholders, match, memo):
+        return self.name
         
 #struct variable_change_t { std::string name; uint8_t change; WATCH_LEAKS(parser::variable_change_t); };
 class VariableChangeType(object):
@@ -226,6 +253,9 @@ class VariableChangeType(object):
         changes = [""]
         return "${%s:%s}" % (self.name, "/".join(changes))
     
+    def replace(self, processor, placeholders, match, memo):
+        return self.name
+        
     __unicode__ = __str__
     
 #struct variable_transform_t { std::string name; regexp::pattern_t pattern; nodes_t format; regexp_options::type options; WATCH_LEAKS(parser::variable_transform_t); };
@@ -246,6 +276,21 @@ class VariableTransformationType(object):
             "".join([ str(frmt) for frmt in self.format]),
             "".join(self.options))
     
+    def replace(self, processor, placeholders, match, memo):
+        text = ""
+        if self.name.isdigit():
+            value = placeholders[self.name].replace(processor, placeholders, match, memo)
+        else:
+            #Recuperarlo del environment
+            value = ""
+        match = self.pattern.search(value)
+        while match:
+            text += "".join([ frmt.replace(processor, placeholders, match, memo) for frmt in self.format])
+            if 'g' not in self.options:
+                break
+            match = self.pattern.search(value, match.end())
+        return text
+    
     __unicode__ = __str__
 
 #struct code_t { std::string code; WATCH_LEAKS(parser::code_t); };
@@ -256,4 +301,7 @@ class CodeType(object):
     def __str__(self):
         return "`%s`" % (self.code)
     
+    def replace(self, processor, placeholders, match, memo):
+        return self.name
+
     __unicode__ = __str__

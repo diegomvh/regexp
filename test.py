@@ -3,18 +3,21 @@
 import unittest
 from regexp.snippet import Snippet
 
+class Processor(object):
+    def __init__(self):
+        self.output = ""
+
+    def write(self, text):
+        self.output += text 
+
 class SnippetTests(unittest.TestCase):
     def setUp(self):
         pass
 
     def test_parser(self):
-        print(Snippet('''def ${1:fname}(${2:`if [ "$TM_CURRENT_LINE" != "" ]
-				# poor man's way ... check if there is an indent or not
-				# (cuz we would have lost the class scope by this point)
-				then
-					echo "self"
-				fi`}):
-	${3/.+/"""/}${3:docstring for $1}${3/.+/"""\n/}${3/.+/\t/}${0:pass}'''))
-        
+        p = Processor()
+        s = Snippet('''<label for="${2:${1/[[:alpha:]]+|( )/(?1:_:\L$0)/g}}">$1</label><input type="${3|text,submit,hidden,button|}" name="${4:$2}" value="$5"${6: id="${7:$2}"}${TM_XHTML}>''')
+        print(s.replace(p, {}))
+        print(p.output)
 if __name__ == '__main__':
     unittest.main()
