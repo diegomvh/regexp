@@ -12,26 +12,28 @@ case_change = {
     'upper': 3, 
     'lower': 4 }
 
+case_chars = {
+    case_change['none']: '\\E',
+    case_change['upper_next']: '\\u',
+    case_change['lower_next']: '\\l',
+    case_change['upper']: '\\U',
+    case_change['lower']: '\\L',
+}
+
+case_function = {
+    case_change['none']: lambda x : x,
+    case_change['upper_next']: lambda x : x[0].upper() + x[1:],
+    case_change['lower_next']: lambda x : x[0].lower() + x[1:],
+    case_change['upper']: lambda x : x.upper(),
+    case_change['lower']: lambda x : x.lower(),
+}
+
 transform = { 
     'kNone': 0 << 0, 
     'kUpcase': 1 << 0,
     'kDowncase': 1 << 1,
     'kCapitalize': 1 << 2, 
     'kAsciify': 1 << 3 }
-
-CASE_UPPER = 0
-CASE_LOWER = 1
-CASE_NONE = 2
-CASE_UPPER_NEXT = 3
-CASE_LOWER_NEXT = 4
-
-CASE_CHARS = {
-    CASE_UPPER: '\\U',
-    CASE_LOWER: '\\L',
-    CASE_NONE: '\\E',
-    CASE_UPPER_NEXT: '\\u',
-    CASE_LOWER_NEXT: '\\l'
-}
 
 def escapeCharacters(text, esc):
     for e in esc:
@@ -48,7 +50,7 @@ class VariableType(object):
     
     def replace(self, processor, placeholders, match, memo):
         if self.name.isdigit():
-            return match.groups()[int(self.name) - 1]
+            return match.group(int(self.name))
         return self.name
 
     __unicode__ = __str__
@@ -64,20 +66,31 @@ class VariableConditionType(object):
         grps = match.groups()
         index = int(self.name) - 1
         nodes = self.if_set if len(grps) > index and grps[index] is not None else self.if_not_set
-        return "".join([node.replace(processor, placeholders, match, memo) for node in nodes])
+        text = ""
+        case = case_change['none']
+        for node in nodes:
+            if isinstance(node, six.integer_types):
+                case = node
+                continue
+            value = node.replace(processor, placeholders, match, memo)
+            # Apply case and append to result
+            text += case_function[case](value)
+            if case in [case_change['upper_next'], case_change['lower_next']]:
+                case = case_change['none']
+        return text
 
     def __str__(self):
         cnd = "(?%s:" % self.name
         for cmps in self.if_set:
             if isinstance(cmps, six.integer_types):
-                cnd += CASE_CHARS[cmps]
+                cnd += case_chars[cmps]
             else:
                 cnd += escapeCharacters(six.text_type(cmps), "(:)")
         if self.if_not_set:
             cnd += ":"
             for cmps in self.if_not_set:
                 if isinstance(cmps, six.integer_types):
-                    cnd += CASE_CHARS[cmps]
+                    cnd += case_chars[cmps]
                 else:
                     cnd += escapeCharacters(six.text_type(cmps), "(:)")
         cnd += ")"
@@ -91,15 +104,6 @@ class FormatType(object):
     def __init__(self):
         self.composites = []
     
-    def case_function(self, case):
-        return {
-            CASE_UPPER: lambda x : x.upper(),
-            CASE_LOWER: lambda x : x.lower(),
-            CASE_NONE: lambda x : x,
-            CASE_UPPER_NEXT: lambda x : x[0].upper() + x[1:],
-            CASE_LOWER_NEXT: lambda x : x[0].lower() + x[1:],
-        }[case]
-        
     @staticmethod
     def prepare_replacement(text):
         def expand(m, template):
@@ -140,7 +144,7 @@ class FormatType(object):
                     case = value
                     continue
                 # Apply case and append to result
-                result.append(self.case_function(case)(value))
+                result.append(case_function[case](value))
                 if case in [CASE_LOWER_NEXT, CASE_UPPER_NEXT]:
                     case = CASE_NONE
             if 'g' not in flags:

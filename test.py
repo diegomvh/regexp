@@ -17,7 +17,12 @@ class SnippetTests(unittest.TestCase):
     def test_parser(self):
         p = Processor()
         s = Snippet('''<label for="${2:${1/[[:alpha:]]+|( )/(?1:_:\L$0)/g}}">$1</label><input type="${3|text,submit,hidden,button|}" name="${4:$2}" value="$5"${6: id="${7:$2}"}${TM_XHTML}>''')
-        print(s.replace(p, {}))
-        print(p.output)
+        print(s.replace(p, {"1": "hola mundo",
+            "2": "id_cacho",
+            "3": 2,
+            "4": "my_name",
+            "5": "hola value",
+            "7": "id_input"}))
+
 if __name__ == '__main__':
     unittest.main()

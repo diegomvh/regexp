@@ -184,15 +184,15 @@ class Parser(object):
         if(self.parse_char("\\") and self.parse_char("ULEul")):
             case = self.source[self.it - 1]
             if case == 'U':
-                nodes.append(types.CASE_UPPER)
+                nodes.append(types.case_change["upper"])
             elif case == 'L':
-                nodes.append(types.CASE_LOWER)
+                nodes.append(types.case_change["lower"])
             elif case == 'E':
-                nodes.append(types.CASE_NONE)
+                nodes.append(types.case_change["none"])
             elif case == 'u':
-                nodes.append(types.CASE_UPPER_NEXT)
+                nodes.append(types.case_change["upper_next"])
             elif case == 'l':
-                nodes.append(types.CASE_LOWER_NEXT)
+                nodes.append(types.case_change["lower_next"])
             return True
         self.it = backtrack
         return False

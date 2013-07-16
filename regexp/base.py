@@ -34,7 +34,7 @@ def convertRe(options):
 
 def compileRe(string, flags):
     # Test oniguruma chars
-    if not any([string.find(tests) != -1 for tests in ["\G"]]):
+    if not any([string.find(tests) != -1 for tests in ["\G", "[[:"]]):
         for o, r in (('?i:', '(?i)'), ):
             string = string.replace(o, r)
         try:
