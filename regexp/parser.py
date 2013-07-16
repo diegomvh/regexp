@@ -237,7 +237,7 @@ class Parser(object):
                 elif self.parse_char("|"):
                     res = types.PlaceholderChoiceType( index.pop() )
                     while self.parse_format_string(",|", res.choices) and self.source[self.it - 1] == ',':
-                        pass
+                        res.choices.append(types.TextType(""))
                     if self.source[self.it - 1] == '|' and self.parse_char("}"):
                         nodes.append(res)
                         return True
@@ -246,7 +246,7 @@ class Parser(object):
                     return True
             elif self.parse_int(index):
                 nodes.append(types.PlaceholderType(index.pop()))
-                return True;
+                return True
         self.it = backtrack
         return False
 

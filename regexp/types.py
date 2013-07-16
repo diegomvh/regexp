@@ -230,7 +230,15 @@ class PlaceholderTransformType(object):
             "".join(self.options))
     
     def replace(self, processor, placeholders, match, memo):
-        return str(self)
+        text = ""
+        value = placeholders[self.index].replace(processor, placeholders, match, memo)
+        match = self.pattern.search(value)
+        while match:
+            text += "".join([ frmt.replace(processor, placeholders, match, memo) for frmt in self.format])
+            if 'g' not in self.options:
+                break
+            match = self.pattern.search(value, match.end())
+        return text
 
     __unicode__ = __str__
 
