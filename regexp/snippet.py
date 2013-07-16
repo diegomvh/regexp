@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import unicode_literals
 
 from .parser import parse_snippet
 from . import types
@@ -19,12 +20,13 @@ class Snippet(object):
         if '0' not in self.placeholders:
             self.placeholders['0'] = types.PlaceholderType("0")
             self.nodes.append(self.placeholders['0'])
-
+        self.taborder = sorted(self.placeholders.keys())
+        
     def __str__(self):
         return "".join([str(node) for node in self.nodes])
 
-    def replace(self, processor, memo):
-        return "".join([node.replace(processor, self.placeholders, None, memo) for node in self.nodes])
+    def replace(self, visitor, memodict):
+        return "".join([node.replace(visitor, memodict, holders = self.placeholders) for node in self.nodes])
 
     __unicode__ = __str__
         

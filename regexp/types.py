@@ -48,7 +48,7 @@ class VariableType(object):
     def __str__(self):
         return "$" + six.text_type(self.name)
     
-    def replace(self, processor, placeholders, match, memo):
+    def replace(self, visitor, memodict, holders = None, match = None):
         if self.name.isdigit():
             return match.group(int(self.name))
         return self.name
@@ -62,7 +62,7 @@ class VariableConditionType(object):
         self.if_set = []
         self.if_not_set = []
 
-    def replace(self, processor, placeholders, match, memo):
+    def replace(self, visitor, memodict, holders = None, match = None):
         grps = match.groups()
         index = int(self.name) - 1
         nodes = self.if_set if len(grps) > index and grps[index] is not None else self.if_not_set
@@ -72,7 +72,7 @@ class VariableConditionType(object):
             if isinstance(node, six.integer_types):
                 case = node
                 continue
-            value = node.replace(processor, placeholders, match, memo)
+            value = node.replace(visitor, memodict, holders, match)
             # Apply case and append to result
             text += case_function[case](value)
             if case in [case_change['upper_next'], case_change['lower_next']]:
@@ -106,7 +106,7 @@ class TextType(object):
     def __str__(self):
         return self.text
     
-    def replace(self, processor, placeholders, match, memo):
+    def replace(self, visitor, memodict, holders = None, match = None):
         return self.text
 
     __unicode__ = __str__
@@ -123,14 +123,14 @@ class PlaceholderType(object):
         else:
             return "$%s" % self.index
     
-    def replace(self, processor, placeholders, match, memo):
-        if self.index in memo:
-            return memo[self.index]
-        elif placeholders[self.index] != self:
+    def replace(self, visitor, memodict, holders = None, match = None):
+        if self.index in memodict:
+            return memodict[self.index]
+        elif holders[self.index] != self:
             #Mirror
-            return placeholders[self.index].replace(processor, placeholders, match, memo)
+            return holders[self.index].replace(visitor, memodict, holders, match)
         else:
-            return "".join([node.replace(processor, placeholders, match, memo)
+            return "".join([node.replace(visitor, memodict, holders, match)
                 for node in self.content ])
 
     __unicode__ = __str__
@@ -144,9 +144,9 @@ class PlaceholderChoiceType(object):
     def __str__(self):
         return "${%s:%s}" % (self.index, "|".join(self.choices))
     
-    def replace(self, processor, placeholders, match, memo):
-        index = self.index in memo and memo[self.index] or 0
-        return self.choices[index].replace(processor, placeholders, match, memo)
+    def replace(self, visitor, memodict, holders = None, match = None):
+        index = self.index in memodict and memodict[self.index] or 0
+        return self.choices[index].replace(visitor, memodict, holders, match)
 
     __unicode__ = __str__
     
@@ -164,12 +164,12 @@ class PlaceholderTransformType(object):
             "".join([ str(frmt) for frmt in self.format]),
             "".join(self.options))
     
-    def replace(self, processor, placeholders, match, memo):
+    def replace(self, visitor, memodict, holders = None, match = None):
         text = ""
-        value = placeholders[self.index].replace(processor, placeholders, match, memo)
+        value = holders[self.index].replace(visitor, memodict, holders, match)
         match = self.pattern.search(value)
         while match:
-            text += "".join([ frmt.replace(processor, placeholders, match, memo) for frmt in self.format])
+            text += "".join([ frmt.replace(visitor, memodict, holders, match) for frmt in self.format])
             if 'g' not in self.options:
                 break
             match = self.pattern.search(value, match.end())
@@ -183,7 +183,7 @@ class VariableFallbackType(object):
         self.name = name
         self.fallback = []
     
-    def replace(self, processor, placeholders, match, memo):
+    def replace(self, visitor, memodict, holders = None, match = None):
         return self.name
         
 #struct variable_change_t { std::string name; uint8_t change; WATCH_LEAKS(parser::variable_change_t); };
@@ -196,7 +196,7 @@ class VariableChangeType(object):
         changes = [""]
         return "${%s:%s}" % (self.name, "/".join(changes))
     
-    def replace(self, processor, placeholders, match, memo):
+    def replace(self, visitor, memodict, holders = None, match = None):
         return self.name
         
     __unicode__ = __str__
@@ -219,16 +219,16 @@ class VariableTransformationType(object):
             "".join([ str(frmt) for frmt in self.format]),
             "".join(self.options))
     
-    def replace(self, processor, placeholders, match, memo):
+    def replace(self, visitor, memodict, holders = None, match = None):
         text = ""
         if self.name.isdigit():
-            value = placeholders[self.name].replace(processor, placeholders, match, memo)
+            value = holders[self.name].replace(visitor, memodict, holders, match)
         else:
             #Recuperarlo del environment
             value = ""
         match = self.pattern.search(value)
         while match:
-            text += "".join([ frmt.replace(processor, placeholders, match, memo) for frmt in self.format])
+            text += "".join([ frmt.replace(visitor, memodict, holders, match) for frmt in self.format])
             if 'g' not in self.options:
                 break
             match = self.pattern.search(value, match.end())
@@ -244,7 +244,7 @@ class CodeType(object):
     def __str__(self):
         return "`%s`" % (self.code)
     
-    def replace(self, processor, placeholders, match, memo):
+    def replace(self, visitor, memodict, holders = None, match = None):
         return self.name
 
     __unicode__ = __str__

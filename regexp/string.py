@@ -10,8 +10,8 @@ class FormatString(object):
     def __str__(self):
         return "".join([str(node) for node in self.nodes])
     
-    def replace(self, processor, memo):
-        return "".join([node.replace(processor, {}, None, memo) for node in self.nodes])
+    def replace(self, processor, memodict):
+        return "".join([node.replace(processor, memodict) for node in self.nodes])
 
     __unicode__ = __str__
         
