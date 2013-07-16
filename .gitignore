@@ -1,0 +1,8 @@
+.project
+.pmxproject
+*~
+*.bak
+*.log
+*.egg-info
+*.pot
+*.py[co]
