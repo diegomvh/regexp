@@ -98,75 +98,6 @@ class VariableConditionType(object):
     
     __unicode__ = __str__
 
-# TODO: Quitar este
-class FormatType(object):
-    _repl_re = re.compile("\$(?:(\d+)|g<(.+?)>)")
-    def __init__(self):
-        self.composites = []
-    
-    @staticmethod
-    def prepare_replacement(text):
-        def expand(m, template):
-            def handle(match):
-                numeric, named = match.groups()
-                if numeric:
-                    return m.group(int(numeric)) or ""
-                return m.group(named) or ""
-            return FormatType._repl_re.sub(handle, template)
-        if '$' in text:
-            return lambda m, r = text: expand(m, r)
-        else:
-            return lambda m, r = text: r
-
-    def apply(self, pattern, text, flags):
-        result = []
-        match = pattern.search(text)
-        if not match: return None
-        beginText = text[:match.start()]
-        while match:
-            nodes = []
-            sourceText = text[match.start():match.end()]
-            endText = text[match.end():]
-            # Translate to conditions
-            for composite in self.composites:
-                if isinstance(composite, VariableConditionType):
-                    nodes.extend(composite.apply(match))
-                else:
-                    nodes.append(composite)
-            # Transform
-            case = CASE_NONE
-            for value in nodes:
-                if isinstance(value, six.string_types):
-                    value = pattern.sub(self.prepare_replacement(value), sourceText)
-                elif isinstance(value, VariableType):
-                    value = match.groups()[value.name - 1]
-                elif isinstance(value, six.integer_types):
-                    case = value
-                    continue
-                # Apply case and append to result
-                result.append(case_function[case](value))
-                if case in [CASE_LOWER_NEXT, CASE_UPPER_NEXT]:
-                    case = CASE_NONE
-            if 'g' not in flags:
-                break
-            match = pattern.search(text, match.end())
-        try:
-            result = "%s%s%s" % (beginText, "".join(result), endText)
-        except Exception as ex:
-            print(ex, result, six.text_type(self))
-        return result 
-
-    def __str__(self):
-        frmt = ""
-        for cmps in self.composites:
-            if isinstance(cmps, six.integer_types):
-                frmt += CASE_CHARS[cmps]
-            else:
-                frmt += six.text_type(cmps)
-        return frmt
-    
-    __unicode__ = __str__
-
 #struct text_t { std::string text; WATCH_LEAKS(parser::text); };
 class TextType(object):
     def __init__(self, text):
@@ -260,7 +191,7 @@ class VariableChangeType(object):
     def __init__(self, name, change):
         self.name = name
         self.change = change
-    
+
     def __str__(self):
         changes = [""]
         return "${%s:%s}" % (self.name, "/".join(changes))
