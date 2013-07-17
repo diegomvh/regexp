@@ -9,9 +9,12 @@ class FormatString(object):
         
     def __str__(self):
         return "".join([str(node) for node in self.nodes])
-    
-    def replace(self, processor, memodict):
-        return "".join([node.replace(processor, memodict) for node in self.nodes])
 
     __unicode__ = __str__
+        
+    def replace(self, memodict):
+        return "".join([node.replace(memodict) for node in self.nodes])
+    
+    def render(self, visitor, memodict):
+        visitor.insertText(self.replace(memodict))
         

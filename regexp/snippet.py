@@ -17,16 +17,19 @@ class Snippet(object):
         self.nodes = parse_snippet(source)
         self.placeholders = {}
         collect(self.nodes, self.placeholders)
-        if '0' not in self.placeholders:
-            self.placeholders['0'] = types.PlaceholderType("0")
-            self.nodes.append(self.placeholders['0'])
+        #if '0' not in self.placeholders:
+        #    self.placeholders['0'] = types.PlaceholderType("0")
+        #    self.nodes.append(self.placeholders['0'])
         self.taborder = sorted(self.placeholders.keys())
         
     def __str__(self):
         return "".join([str(node) for node in self.nodes])
 
-    def replace(self, visitor, memodict):
-        return "".join([node.replace(visitor, memodict, holders = self.placeholders) for node in self.nodes])
+    def replace(self, memodict):
+        return "".join([node.replace(memodict, holders = self.placeholders) for node in self.nodes])
+
+    def render(self, visitor, memodict):
+        visitor.insertText(self.replace(memodict))
 
     __unicode__ = __str__
         
