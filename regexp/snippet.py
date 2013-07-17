@@ -24,7 +24,9 @@ class Snippet(object):
 
     def __str__(self):
         return "".join([str(node) for node in self.__hasLastHolder and self.nodes or self.nodes[:-1]])
-
+    
+    __unicode__ = __str__
+    
     def replace(self, memodict):
         return "".join([node.replace(memodict, holders = self.placeholders) for node in self.nodes])
 
@@ -32,7 +34,8 @@ class Snippet(object):
         for node in self.nodes:
             node.render(visitor, memodict, holders = self.placeholders)
 
-    __unicode__ = __str__
+    def memodict(self):
+        return dict([ (key_holder[0], key_holder[1].memo()) for key_holder in self.placeholders.items() ])
 
 class Visitor(object):
     def __init__(self):
@@ -55,7 +58,7 @@ class SnippetHandler(object):
         self.placeholders = [ self.snippet.placeholders[key] for key in taborder ]
 
     def execute(self, visitor):
-        self.memodict = {}
+        self.memodict = self.snippet.memodict()
         self.holderIndex = 0
         self.render(visitor)
 
@@ -81,5 +84,5 @@ class SnippetHandler(object):
             self.holderIndex -= 1
         return self.placeholders[self.holderIndex]
 
-    def insertText(self, text):
+    def setContent(self, text):
         self.placeholders[self.holderIndex].setContent(text, self.memodict)

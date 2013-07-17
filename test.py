@@ -30,17 +30,21 @@ ${4/(\A\s*,\s*\Z)|,?\s*([A-Za-z_][a-zA-Z0-9_]*)\s*(=[^,]*)?(,\s*|$)/(?2:\t\tself
         snippet = SnippetHandler(Snippet('''<label for="${2:${1/[[:alpha:]]+|( )/(?1:_:\L$0)/g}}">$1</label><input type="${3|text,submit,hidden,button|}" name="${4:$2}" value="$5"${6: id="${7:$2}"}${TM_XHTML}>'''))
         snippet.execute(visitor)
         print(visitor.output)
-        snippet.insertText("hola mundo")
+        snippet.setContent("hola mundo")
+        snippet.next()
+        snippet.setContent("id_cacho")
+        snippet.next()
+        snippet.setContent(2)
+        snippet.next()
+        snippet.setContent("my_name")
+        snippet.next()
+        snippet.setContent("hola value")
+        snippet.next()
+        snippet.next()
+        snippet.setContent("id_input")
         snippet.render(visitor)
         print(visitor.output)
-        print(snippet.next())
-        
-        #print(snippet.replace({"1": "hola mundo",
-        #    "2": "id_cacho",
-        #    "3": 2,
-        #    "4": "my_name",
-        #    "5": "hola value",
-        #    "7": "id_input"}))
-        
+        print(snippet.memodict)
+
 if __name__ == '__main__':
     unittest.main()

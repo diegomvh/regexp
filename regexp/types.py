@@ -3,8 +3,10 @@
 from __future__ import unicode_literals
 
 import re
-from .utils import six
 from unicodedata import decomposition
+from collections import namedtuple
+
+from .utils import six
 
 def asciify(string):
     '''"ASCIIfy" a Unicode string by stripping all umlauts, tildes, etc.'''
@@ -108,8 +110,7 @@ class VariableConditionType(object):
     __unicode__ = __str__
 
     def replace(self, memodict, holders = None, match = None):
-        group = match.group(int(self.name) - 1)
-        print(group)
+        group = match.group(int(self.name))
         nodes = self.if_set if group else self.if_not_set
         text = ""
         case = case_change['none']
@@ -142,7 +143,9 @@ class TextType(object):
 
     def render(self, visitor, memodict, holders = None, match = None):
         visitor.insertText(self.replace(memodict, holders, match))
-    
+
+PlaceholderMemo = namedtuple("PlaceholderMemo", "start end content")
+
 #struct placeholder_t { size_t index; nodes_t content; WATCH_LEAKS(parser::placeholder_t); };
 class PlaceholderType(object):
     def __init__(self, index):
@@ -158,8 +161,8 @@ class PlaceholderType(object):
     __unicode__ = __str__
     
     def replace(self, memodict, holders = None, match = None):
-        if self.index in memodict:
-            return memodict[self.index]["content"]
+        if memodict[self.index].content:
+            return memodict[self.index].content
         elif holders[self.index] != self:
             #Mirror
             return holders[self.index].replace(memodict, holders, match)
@@ -168,15 +171,28 @@ class PlaceholderType(object):
                 for node in self.content ])
     
     def render(self, visitor, memodict, holders = None, match = None):
-        visitor.insertText(self.replace(memodict, holders, match))
-        
+        memo = memodict[self.index]
+        start = visitor.position()
+        if memo.content:
+            visitor.insertText(memodict[self.index].content)
+        elif holders[self.index] != self:
+            #Mirror
+            holders[self.index].render(visitor, memodict, holders, match)
+        else:
+            for node in self.content:
+                node.render(visitor, memodict, holders, match)
+        end = visitor.position()
+        memodict[self.index] = memo._replace(start = start, end = end)
+
     def isDisabled(self, memodict):
         return False
 
     def setContent(self, text, memodict):
-        data = memodict.setdefault(self.index, {})
-        data["content"] = text
+        memodict[self.index] = memodict[self.index]._replace(content = text)
         return True
+        
+    def memo(self):
+        return PlaceholderMemo(start = 0, end = 0, content = None)
 
 #struct placeholder_choice_t { size_t index; std::vector<nodes_t> choices; WATCH_LEAKS(parser::placeholder_choice_t); };
 class PlaceholderChoiceType(object):
@@ -190,20 +206,25 @@ class PlaceholderChoiceType(object):
     __unicode__ = __str__
 
     def replace(self, memodict, holders = None, match = None):
-        index = self.index in memodict and memodict[self.index] or 0
-        return self.choices[index].replace(memodict, holders, match)
+        memo = memodict[self.index]
+        return self.choices[memo.content].replace(memodict, holders, match)
 
     def render(self, visitor, memodict, holders = None, match = None):
+        start = visitor.position()
         visitor.insertText(self.replace(memodict, holders, match))
+        end = visitor.position()
+        memodict[self.index] = memodict[self.index]._replace(start = start, end = end)
     
     def isDisabled(self, memodict):
         return False
     
     def setContent(self, text, memodict):
-        data = memodict.setdefault(self.index, {})
-        data["content"] = text
+        memodict[self.index] = memodict[self.index]._replace(content = text)
         return True
 
+    def memo(self):
+        return PlaceholderMemo(start = 0, end = 0, content = 0)
+        
 #struct placeholder_transform_t { size_t index; regexp::pattern_t pattern; nodes_t format; regexp_options::type options; WATCH_LEAKS(parser::placeholder_transform_t); };
 class PlaceholderTransformType(object):
     def __init__(self, index):
@@ -232,15 +253,20 @@ class PlaceholderTransformType(object):
         return text
 
     def render(self, visitor, memodict, holders = None, match = None):
+        start = visitor.position()
         visitor.insertText(self.replace(memodict, holders, match))
+        end = visitor.position()
+        memodict[self.index] = memodict[self.index]._replace(start = start, end = end)
 
     def isDisabled(self, memodict):
         return False
 
     def setContent(self, text, memodict):
-        data = memodict.setdefault(self.index, {})
-        data["content"] = text
+        memodict[self.index] = memodict[self.index]._replace(content = text)
         return True
+    
+    def memo(self):
+        return PlaceholderMemo(start = 0, end = 0, content = None)
 
 #struct variable_fallback_t { std::string name; nodes_t fallback; WATCH_LEAKS(parser::variable_fallback_t); };
 class VariableFallbackType(object):
