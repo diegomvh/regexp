@@ -17,19 +17,69 @@ class Snippet(object):
         self.nodes = parse_snippet(source)
         self.placeholders = {}
         collect(self.nodes, self.placeholders)
-        #if '0' not in self.placeholders:
-        #    self.placeholders['0'] = types.PlaceholderType("0")
-        #    self.nodes.append(self.placeholders['0'])
-        self.taborder = sorted(self.placeholders.keys())
-        
+        self.__hasLastHolder = '0' in self.placeholders
+        if not self.__hasLastHolder:
+            self.placeholders['0'] = types.PlaceholderType("0")
+            self.nodes.append(self.placeholders['0'])
+
     def __str__(self):
-        return "".join([str(node) for node in self.nodes])
+        return "".join([str(node) for node in self.__hasLastHolder and self.nodes or self.nodes[:-1]])
 
     def replace(self, memodict):
         return "".join([node.replace(memodict, holders = self.placeholders) for node in self.nodes])
 
     def render(self, visitor, memodict):
-        visitor.insertText(self.replace(memodict))
+        for node in self.nodes:
+            node.render(visitor, memodict, holders = self.placeholders)
 
     __unicode__ = __str__
+
+class Visitor(object):
+    def __init__(self):
+        self.output = ""
+
+    def resetOutput(self):
+        self.output = ""
+
+    def insertText(self, text):
+        self.output += text 
+
+    def position(self):
+        return len(self.output)
         
+class SnippetHandler(object):
+    def __init__(self, snippet):
+        self.snippet = snippet
+        taborder = sorted(self.snippet.placeholders.keys())
+        taborder.append(taborder.pop(0))
+        self.placeholders = [ self.snippet.placeholders[key] for key in taborder ]
+
+    def execute(self, visitor):
+        self.memodict = {}
+        self.holderIndex = 0
+        self.render(visitor)
+
+    def render(self, visitor):
+        visitor.resetOutput()
+        self.snippet.render(visitor, self.memodict)
+        
+    def next(self):
+        if self.holderIndex < len(self.placeholders) - 1:
+            self.holderIndex += 1
+
+        #Fix disabled placeholders
+        while self.holderIndex < len(self.placeholders) - 1 and self.placeholders[self.holderIndex].isDisabled(self.memodict):
+            self.holderIndex += 1
+        return self.placeholders[self.holderIndex]
+
+    def previous(self):
+        if self.holderIndex > 0:
+            self.holderIndex -= 1
+
+        #Fix disabled placeholders
+        while self.holderIndex != 0 and self.placeholders[self.holderIndex].isDisabled(self.memodict):
+            self.holderIndex -= 1
+        return self.placeholders[self.holderIndex]
+
+    def insertText(self, text):
+        self.placeholders[self.holderIndex].setContent(text, self.memodict)

@@ -3,18 +3,8 @@
 import re
 import unittest
 
-from regexp.snippet import Snippet
+from regexp.snippet import Snippet, Visitor, SnippetHandler
 from regexp.string import FormatString
-
-class Visitor(object):
-    def __init__(self):
-        self.output = ""
-
-    def insertText(self, text):
-        self.output += text 
-
-    def position(self):
-        return len(self.output)
 
 class SnippetTests(unittest.TestCase):
     def setUp(self):
@@ -36,14 +26,21 @@ ${4/(\A\s*,\s*\Z)|,?\s*([A-Za-z_][a-zA-Z0-9_]*)\s*(=[^,]*)?(,\s*|$)/(?2:\t\tself
         print(string.replace({}))
 
     def test_snippet_holders(self):
-        snippet = Snippet('''<label for="${2:${1/[[:alpha:]]+|( )/(?1:_:\L$0)/g}}">$1</label><input type="${3|text,submit,hidden,button|}" name="${4:$2}" value="$5"${6: id="${7:$2}"}${TM_XHTML}>''')
-        print(snippet.taborder)
-        print(snippet.replace({"1": "hola mundo",
-            "2": "id_cacho",
-            "3": 2,
-            "4": "my_name",
-            "5": "hola value",
-            "7": "id_input"}))
+        visitor = Visitor()
+        snippet = SnippetHandler(Snippet('''<label for="${2:${1/[[:alpha:]]+|( )/(?1:_:\L$0)/g}}">$1</label><input type="${3|text,submit,hidden,button|}" name="${4:$2}" value="$5"${6: id="${7:$2}"}${TM_XHTML}>'''))
+        snippet.execute(visitor)
+        print(visitor.output)
+        snippet.insertText("hola mundo")
+        snippet.render(visitor)
+        print(visitor.output)
+        print(snippet.next())
+        
+        #print(snippet.replace({"1": "hola mundo",
+        #    "2": "id_cacho",
+        #    "3": 2,
+        #    "4": "my_name",
+        #    "5": "hola value",
+        #    "7": "id_input"}))
         
 if __name__ == '__main__':
     unittest.main()

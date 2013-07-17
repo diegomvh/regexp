@@ -159,7 +159,7 @@ class PlaceholderType(object):
     
     def replace(self, memodict, holders = None, match = None):
         if self.index in memodict:
-            return memodict[self.index]
+            return memodict[self.index]["content"]
         elif holders[self.index] != self:
             #Mirror
             return holders[self.index].replace(memodict, holders, match)
@@ -170,6 +170,14 @@ class PlaceholderType(object):
     def render(self, visitor, memodict, holders = None, match = None):
         visitor.insertText(self.replace(memodict, holders, match))
         
+    def isDisabled(self, memodict):
+        return False
+
+    def setContent(self, text, memodict):
+        data = memodict.setdefault(self.index, {})
+        data["content"] = text
+        return True
+
 #struct placeholder_choice_t { size_t index; std::vector<nodes_t> choices; WATCH_LEAKS(parser::placeholder_choice_t); };
 class PlaceholderChoiceType(object):
     def __init__(self, index):
@@ -188,6 +196,14 @@ class PlaceholderChoiceType(object):
     def render(self, visitor, memodict, holders = None, match = None):
         visitor.insertText(self.replace(memodict, holders, match))
     
+    def isDisabled(self, memodict):
+        return False
+    
+    def setContent(self, text, memodict):
+        data = memodict.setdefault(self.index, {})
+        data["content"] = text
+        return True
+
 #struct placeholder_transform_t { size_t index; regexp::pattern_t pattern; nodes_t format; regexp_options::type options; WATCH_LEAKS(parser::placeholder_transform_t); };
 class PlaceholderTransformType(object):
     def __init__(self, index):
@@ -217,6 +233,14 @@ class PlaceholderTransformType(object):
 
     def render(self, visitor, memodict, holders = None, match = None):
         visitor.insertText(self.replace(memodict, holders, match))
+
+    def isDisabled(self, memodict):
+        return False
+
+    def setContent(self, text, memodict):
+        data = memodict.setdefault(self.index, {})
+        data["content"] = text
+        return True
 
 #struct variable_fallback_t { std::string name; nodes_t fallback; WATCH_LEAKS(parser::variable_fallback_t); };
 class VariableFallbackType(object):
