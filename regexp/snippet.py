@@ -48,11 +48,15 @@ class Visitor(object):
         return len(self.output)
         
 class SnippetHandler(object):
-    def __init__(self, snippet):
+    def __init__(self):
+        self.snippet = None
+        self.placeholders = [ ]
+
+    def setSnippet(self, snippet):
         self.snippet = snippet
-        taborder = sorted(self.snippet.placeholders.keys())
+        taborder = sorted(snippet.placeholders.keys())
         taborder.append(taborder.pop(0))
-        self.placeholders = [ self.snippet.placeholders[key] for key in taborder ]
+        self.placeholders = [ snippet.placeholders[key] for key in taborder ]
 
     def execute(self, visitor):
         self.memodict = types.Memodict()
@@ -60,9 +64,20 @@ class SnippetHandler(object):
         self.render(visitor)
 
     def render(self, visitor):
+        assert self.snippet is not None
         visitor.resetOutput()
         self.snippet.render(visitor, self.memodict)
 
+    def __is_disabled(self, holder):
+        placeholders = filter(
+            lambda node: isinstance(node, types.PlaceholderType), 
+            self.placeholders)
+        for placeholder in placeholders:
+            chain = []
+            if placeholder.collect(holder, chain):
+                return any(map(lambda holder: self.memodict.get_or_create(holder).content, chain))
+        return False
+        
     def setHolder(self, start, end = None):
         '''Set the placeholder for position, where start > holder position > end'''
         end = end != None and end or start
@@ -70,8 +85,7 @@ class SnippetHandler(object):
         for holder in self.placeholders:
             holderStart, holderEnd = holder.position(self.memodict)
             holderLength = holderEnd -holderStart
-            if holderStart <= start <= holderEnd and \
-                holderStart <= end <= holderEnd and \
+            if holderStart <= start <= end <= holderEnd and \
                 (found == None or holderLength < found):
                 found = holderLength
                 self.holderIndex = self.placeholders.index(holder)
@@ -81,7 +95,7 @@ class SnippetHandler(object):
         if self.holderIndex < len(self.placeholders) - 1:
             self.holderIndex += 1
             #Fix disabled placeholders
-            while self.holderIndex < len(self.placeholders) - 1 and self.placeholders[self.holderIndex].isDisabled(self.memodict):
+            while self.holderIndex < len(self.placeholders) - 1 and self.__is_disabled(self.placeholders[self.holderIndex]):
                 self.holderIndex += 1
             return True
         return False
@@ -90,10 +104,13 @@ class SnippetHandler(object):
         if self.holderIndex > 0:
             self.holderIndex -= 1
             #Fix disabled placeholders
-            while self.holderIndex != 0 and self.placeholders[self.holderIndex].isDisabled(self.memodict):
+            while self.holderIndex != 0 and self.__is_disabled(self.placeholders[self.holderIndex]):
                 self.holderIndex -= 1
             return True
         return False
+
+    def lastHolder(self):
+        return self.holderIndex == len(self.placeholders)
 
     def setContent(self, text):
         self.placeholders[self.holderIndex].setContent(text, self.memodict)
