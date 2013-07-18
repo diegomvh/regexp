@@ -44,7 +44,6 @@ ${4/(\A\s*,\s*\Z)|,?\s*([A-Za-z_][a-zA-Z0-9_]*)\s*(=[^,]*)?(,\s*|$)/(?2:\t\tself
         snippet.setContent("id_input")
         snippet.render(visitor)
         print(visitor.output)
-        print(snippet.memodict)
 
 if __name__ == '__main__':
     unittest.main()

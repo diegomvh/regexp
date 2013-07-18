@@ -34,9 +34,6 @@ class Snippet(object):
         for node in self.nodes:
             node.render(visitor, memodict, holders = self.placeholders)
 
-    def memodict(self):
-        return dict([ (key_holder[0], key_holder[1].memo()) for key_holder in self.placeholders.items() ])
-
 class Visitor(object):
     def __init__(self):
         self.output = ""
@@ -58,7 +55,7 @@ class SnippetHandler(object):
         self.placeholders = [ self.snippet.placeholders[key] for key in taborder ]
 
     def execute(self, visitor):
-        self.memodict = self.snippet.memodict()
+        self.memodict = {}
         self.holderIndex = 0
         self.render(visitor)
 
