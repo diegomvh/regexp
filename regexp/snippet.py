@@ -55,31 +55,45 @@ class SnippetHandler(object):
         self.placeholders = [ self.snippet.placeholders[key] for key in taborder ]
 
     def execute(self, visitor):
-        self.memodict = {}
+        self.memodict = types.Memodict()
         self.holderIndex = 0
         self.render(visitor)
 
     def render(self, visitor):
         visitor.resetOutput()
         self.snippet.render(visitor, self.memodict)
-        
-    def next(self):
+
+    def setHolder(self, start, end = None):
+        '''Set the placeholder for position, where start > holder position > end'''
+        end = end != None and end or start
+        found = None
+        for holder in self.placeholders:
+            holderStart, holderEnd = holder.position(self.memodict)
+            holderLength = holderEnd -holderStart
+            if holderStart <= start <= holderEnd and \
+                holderStart <= end <= holderEnd and \
+                (found == None or holderLength < found):
+                found = holderLength
+                self.holderIndex = self.placeholders.index(holder)
+        return found != None
+
+    def nextHolder(self):
         if self.holderIndex < len(self.placeholders) - 1:
             self.holderIndex += 1
+            #Fix disabled placeholders
+            while self.holderIndex < len(self.placeholders) - 1 and self.placeholders[self.holderIndex].isDisabled(self.memodict):
+                self.holderIndex += 1
+            return True
+        return False
 
-        #Fix disabled placeholders
-        while self.holderIndex < len(self.placeholders) - 1 and self.placeholders[self.holderIndex].isDisabled(self.memodict):
-            self.holderIndex += 1
-        return self.placeholders[self.holderIndex]
-
-    def previous(self):
+    def previousHolder(self):
         if self.holderIndex > 0:
             self.holderIndex -= 1
-
-        #Fix disabled placeholders
-        while self.holderIndex != 0 and self.placeholders[self.holderIndex].isDisabled(self.memodict):
-            self.holderIndex -= 1
-        return self.placeholders[self.holderIndex]
+            #Fix disabled placeholders
+            while self.holderIndex != 0 and self.placeholders[self.holderIndex].isDisabled(self.memodict):
+                self.holderIndex -= 1
+            return True
+        return False
 
     def setContent(self, text):
         self.placeholders[self.holderIndex].setContent(text, self.memodict)
