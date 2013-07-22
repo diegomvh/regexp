@@ -53,7 +53,7 @@ class Parser(object):
             res.append(chrs)
             return True
         self.it = backtrack
-        return false
+        return False
 
     def parse_regexp_options(self, options):
         while self.parse_char("giems"):

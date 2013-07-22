@@ -13,17 +13,16 @@ class FormatString(object):
 
     __unicode__ = __str__
         
-    def replace(self, sourceString, pattern, repeat = False, variables = None):
+    def replace(self, source, pattern, repeat = False, variables = None):
         memodict = {}
         pattern = compileRegexp(pattern)
-        match = pattern.search(sourceString)
+        match = pattern.search(source)
         if match:
-            text = sourceString[:match.start()]
+            text = source[:match.start()]
             while match:
                 text += "".join([node.replace(memodict, match = match, variables = variables) for node in self.nodes])
                 if not repeat:
                     break
-                match = pattern.search(sourceString, match.end())
-            text += sourceString[match.end():]
+                match = pattern.search(source, match.end())
+            text += source[match.end():]
             return text
-    

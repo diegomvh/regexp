@@ -41,7 +41,13 @@ ${4/(\A\s*,\s*\Z)|,?\s*([A-Za-z_][a-zA-Z0-9_]*)\s*(=[^,]*)?(,\s*|$)/(?2:\t\tself
         for test in tests:
             frmtString = FormatString(test[2])
             self.assertEqual(frmtString.replace(test[0], test[1]), test[3])
-
+    # TODO: class
+    def test_format_match(self):
+        tests = [("storage.type.${0:/downcase}", "TODO", ".+", "storage.type.todo")]
+        for test in tests:
+            frmtString = FormatString(test[0])
+            self.assertEqual(frmtString.replace(test[1], test[2]), test[3])
+            
     def test_snippet_holders(self):
         # Build snippet and snippet handler
         snippet = Snippet('''<label for="${2:${1/[[:alpha:]]+|( )/(?1:_:\L$0)/g}}">$1</label><input type="${3|text,submit,hidden,button|}" name="${4:$2}" value="$5"${6: id="${7:$2}"}${TM_XHTML}>''')
