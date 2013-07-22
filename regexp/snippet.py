@@ -23,7 +23,7 @@ class Snippet(object):
             self.nodes.append(self.placeholders['0'])
 
     def __str__(self):
-        return "".join([str(node) for node in self.__hasLastHolder and self.nodes or self.nodes[:-1]])
+        return "".join([unicode(node) for node in self.__hasLastHolder and self.nodes or self.nodes[:-1]])
     
     __unicode__ = __str__
     
@@ -37,6 +37,7 @@ class Snippet(object):
 class Visitor(object):
     def __init__(self):
         self.output = ""
+        self.variables = {}
 
     def resetOutput(self):
         self.output = ""
@@ -47,6 +48,9 @@ class Visitor(object):
     def position(self):
         return len(self.output)
         
+    def environmentVariables(self):
+        return self.variables
+
 class SnippetHandler(object):
     def __init__(self):
         self.snippet = None

@@ -91,13 +91,15 @@ class VariableType(object):
 
     __unicode__ = __str__    
         
-    def replace(self, memodict, holders = None, match = None):
+    def replace(self, memodict, holders = None, match = None, variables = None):
         if self.name.isdigit():
             return match.group(int(self.name))
-        return self.name
+        if variables and self.name in variables:
+            return variables[self.name]
+        return ""
 
     def render(self, visitor, memodict, holders = None, match = None):
-        visitor.insertText(self.replace(memodict, holders, match))
+        visitor.insertText(self.replace(memodict, holders, match, visitor.environmentVariables()))
 
 #struct variable_condition_t { std::string name; nodes_t if_set, if_not_set; WATCH_LEAKS(parser::variable_condition_t); };
 class VariableConditionType(object):
@@ -125,7 +127,7 @@ class VariableConditionType(object):
     
     __unicode__ = __str__
 
-    def replace(self, memodict, holders = None, match = None):
+    def replace(self, memodict, holders = None, match = None, variables = None):
         group = match.group(int(self.name))
         nodes = self.if_set if group else self.if_not_set
         text = ""
@@ -142,7 +144,7 @@ class VariableConditionType(object):
         return text
 
     def render(self, visitor, memodict, holders = None, match = None):
-        visitor.insertText(self.replace(memodict, holders, match))
+        visitor.insertText(self.replace(memodict, holders, match, visitor.environmentVariables()))
 
 #struct text_t { std::string text; WATCH_LEAKS(parser::text); };
 class TextType(object):
@@ -154,11 +156,11 @@ class TextType(object):
     
     __unicode__ = __str__
     
-    def replace(self, memodict, holders = None, match = None):
+    def replace(self, memodict, holders = None, match = None, variables = None):
         return self.text
 
     def render(self, visitor, memodict, holders = None, match = None):
-        visitor.insertText(self.replace(memodict, holders, match))
+        visitor.insertText(self.replace(memodict, holders, match, visitor.environmentVariables()))
 
 class PlaceholderTypeMixin(object):
     def memoFactory(self, identifier):
@@ -180,7 +182,7 @@ class PlaceholderType(PlaceholderTypeMixin):
     
     def __str__(self):
         if self.content:
-            return "${%s:%s}" % (self.index, "".join([str(node) for node in self.content]))
+            return "${%s:%s}" % (self.index, "".join([unicode(node) for node in self.content]))
         else:
             return "$%s" % self.index
 
@@ -198,7 +200,7 @@ class PlaceholderType(PlaceholderTypeMixin):
         else:
             return False
         
-    def replace(self, memodict, holders = None, match = None):
+    def replace(self, memodict, holders = None, match = None, variables = None):
         memo = memodict.get_or_create(self)
         if memo.content:
             return memo.content
@@ -235,11 +237,11 @@ class PlaceholderChoiceType(PlaceholderTypeMixin):
         self.choices = []
 
     def __str__(self):
-        return "${%s|%s|}" % (self.index, ",".join([ str(choice) for choice in self.choices]))
+        return "${%s|%s|}" % (self.index, ",".join([ unicode(choice) for choice in self.choices]))
 
     __unicode__ = __str__
 
-    def replace(self, memodict, holders = None, match = None):
+    def replace(self, memodict, holders = None, match = None, variables = None):
         memo = memodict.get_or_create(self)
         if isinstance(memo.content, int):
             return self.choices[memo.content].replace(memodict, holders, match)
@@ -249,7 +251,7 @@ class PlaceholderChoiceType(PlaceholderTypeMixin):
         memo = memodict.get_or_create(self)
         start = visitor.position()
         
-        visitor.insertText(self.replace(memodict, holders, match))
+        visitor.insertText(self.replace(memodict, holders, match, visitor.environmentVariables()))
 
         end = visitor.position()
         memodict.set(self, memo._replace(start = start, end = end))
@@ -268,12 +270,12 @@ class PlaceholderTransformType(PlaceholderTypeMixin):
     def __str__(self):
         return "${%s/%s/%s/%s}" % (self.index, 
             self.pattern.pattern, 
-            "".join([ str(frmt) for frmt in self.format]),
+            "".join([ unicode(frmt) for frmt in self.format]),
             "".join(self.options))
     
     __unicode__ = __str__
     
-    def replace(self, memodict, holders = None, match = None):
+    def replace(self, memodict, holders = None, match = None, variables = None):
         text = ""
         value = holders[self.index].replace(memodict, holders, match)
         match = self.pattern.search(value)
@@ -288,7 +290,7 @@ class PlaceholderTransformType(PlaceholderTypeMixin):
         memo = memodict.get_or_create(self)
         start = visitor.position()
         
-        visitor.insertText(self.replace(memodict, holders, match))
+        visitor.insertText(self.replace(memodict, holders, match, visitor.environmentVariables()))
         
         end = visitor.position()
         memodict.set(self, memo._replace(start = start, end = end))
@@ -302,11 +304,11 @@ class VariableFallbackType(object):
         self.name = name
         self.fallback = []
     
-    def replace(self, memodict, holders = None, match = None):
+    def replace(self, memodict, holders = None, match = None, variables = None):
         return self.name
         
     def render(self, visitor, memodict, holders = None, match = None):
-        visitor.insertText(self.replace(memodict, holders, match))
+        visitor.insertText(self.replace(memodict, holders, match, visitor.environmentVariables()))
 
 #struct variable_change_t { std::string name; uint8_t change; WATCH_LEAKS(parser::variable_change_t); };
 class VariableChangeType(object):
@@ -320,7 +322,7 @@ class VariableChangeType(object):
     
     __unicode__ = __str__
 
-    def replace(self, memodict, holders = None, match = None):
+    def replace(self, memodict, holders = None, match = None, variables = None):
         text = self.name
         for key, function in transform_function.items():
             if self.change & key:
@@ -328,7 +330,7 @@ class VariableChangeType(object):
         return text
         
     def render(self, visitor, memodict, holders = None, match = None):
-        visitor.insertText(self.replace(memodict, holders, match))
+        visitor.insertText(self.replace(memodict, holders, match, visitor.environmentVariables()))
 
 #struct variable_transform_t { std::string name; regexp::pattern_t pattern; nodes_t format; regexp_options::type options; WATCH_LEAKS(parser::variable_transform_t); };
 class VariableTransformationType(object):
@@ -341,12 +343,12 @@ class VariableTransformationType(object):
     def __str__(self):
         return "${%s/%s/%s/%s}" % (self.name, 
             self.pattern.pattern, 
-            "".join([ str(frmt) for frmt in self.format]),
+            "".join([ unicode(frmt) for frmt in self.format]),
             "".join(self.options))
     
     __unicode__ = __str__
     
-    def replace(self, memodict, holders = None, match = None):
+    def replace(self, memodict, holders = None, match = None, variables = None):
         text = ""
         if self.name.isdigit():
             value = holders[self.name].replace(memodict, holders, match)
@@ -362,7 +364,7 @@ class VariableTransformationType(object):
         return text
     
     def render(self, visitor, memodict, holders = None, match = None):
-        visitor.insertText(self.replace(memodict, holders, match))
+        visitor.insertText(self.replace(memodict, holders, match, visitor.environmentVariables()))
 
 #struct code_t { std::string code; WATCH_LEAKS(parser::code_t); };
 class CodeType(object):
@@ -374,14 +376,14 @@ class CodeType(object):
     
     __unicode__ = __str__
     
-    def replace(self, memodict, holders = None, match = None):
+    def replace(self, memodict, holders = None, match = None, variables = None):
         memo = memodict.get_or_create(self)
         if memo.content:
             return memo.content
         return self.name
 
     def render(self, visitor, memodict, holders = None, match = None):
-        visitor.insertText(self.replace(memodict, holders, match))
+        visitor.insertText(self.replace(memodict, holders, match, visitor.environmentVariables()))
     
     def mementoFactory(self, identifier):
         return Memo(identifier = identifier, start = 0, end = 0, content = None)

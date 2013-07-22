@@ -8,7 +8,7 @@ class FormatString(object):
         self.nodes = parse_format_string(source)
         
     def __str__(self):
-        return "".join([str(node) for node in self.nodes])
+        return "".join([unicode(node) for node in self.nodes])
 
     __unicode__ = __str__
         
