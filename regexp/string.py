@@ -25,6 +25,3 @@ class FormatString(object):
             match = pattern.search(sourceString, match.end())
         return text
     
-    def render(self, visitor, memodict):
-        visitor.insertText(self.replace(memodict))
-        

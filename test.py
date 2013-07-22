@@ -35,7 +35,9 @@ ${4/(\A\s*,\s*\Z)|,?\s*([A-Za-z_][a-zA-Z0-9_]*)\s*(=[^,]*)?(,\s*|$)/(?2:\t\tself
             ("æbleGRØD", ".+", "»${0:/downcase}«", "»æblegrød«"),
             ("æbleGRØD", ".+", "»${0:/capitalize}«", "»Æblegrød«"),
             ("æbleGRØD", ".+", "»${0:/asciify}«", "»aebleGROED«"),
-            ("æbleGRØD", ".+", "»${0:/capitalize/asciify}«", "»AEblegroed«")]
+            ("æbleGRØD", ".+", "»${0:/capitalize/asciify}«", "»AEblegroed«"),
+            ("class ClassName(object):", ".+", '${0/class\s+([A-Za-z_][A-Za-z0-9_]*.+?\)?)(\:|$)/$1/g}', "ClassName(object)"),
+            ("def method_name(arg1, arg2, arg3):", ".+", '${0/def\s+([A-Za-z_][A-Za-z0-9_]*\()(?:(.{,40}?\))|((.{40}).+?\)))(\:)/$1(?2:$2)(?3:$4…\))/g}', "method_name(arg1, arg2, arg3)")]
         for test in tests:
             frmtString = FormatString(test[2])
             self.assertEqual(frmtString.replace(test[0], test[1]), test[3])

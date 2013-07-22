@@ -341,11 +341,10 @@ class VariableTransformationType(object):
     
     def replace(self, memodict, holders = None, match = None, variables = None):
         text = ""
-        if self.name.isdigit():
+        if holders:
             value = holders[self.name].replace(memodict, holders, match)
-        else:
-            #Recuperarlo del environment
-            value = ""
+        elif match and self.name.isdigit():
+            value = match.group(int(self.name))
         match = self.pattern.search(value)
         while match:
             text += "".join([ frmt.replace(memodict, holders, match) for frmt in self.format])
