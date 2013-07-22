@@ -24,10 +24,21 @@ ${4/(\A\s*,\s*\Z)|,?\s*([A-Za-z_][a-zA-Z0-9_]*)\s*(=[^,]*)?(,\s*|$)/(?2:\t\tself
             self.assertEqual(unicode(Snippet(snippet)), snippet)
     
     def test_parse_format_string(self):
-        format_strings = [ "${1/class\s+([A-Za-z_][A-Za-z0-9_]*.+?\)?)(\:|$)/$1/g}",
-		  "${1/def\s+([A-Za-z_][A-Za-z0-9_]*\()(?:(.{,40}?\))|((.{40}).+?\)))(\:)/$1(?2:$2)(?3:$4…\))/g}"]
+        format_strings = [ "${0/class\s+([A-Za-z_][A-Za-z0-9_]*.+?\)?)(\:|$)/$1/g}",
+		  "${0/def\s+([A-Za-z_][A-Za-z0-9_]*\()(?:(.{,40}?\))|((.{40}).+?\)))(\:)/$1(?2:$2)(?3:$4…\))/g}",
+		  ]
         for frmtString in format_strings:
             self.assertEqual(unicode(FormatString(frmtString)), frmtString)
+
+    def test_format_string(self):
+        tests = [("æbleGRØD", ".+", "»${0:/upcase}«", "»ÆBLEGRØD«"),
+            ("æbleGRØD", ".+", "»${0:/downcase}«", "»æblegrød«"),
+            ("æbleGRØD", ".+", "»${0:/capitalize}«", "»Æblegrød«"),
+            ("æbleGRØD", ".+", "»${0:/asciify}«", "»aebleGROED«"),
+            ("æbleGRØD", ".+", "»${0:/capitalize/asciify}«", "»AEblegroed«")]
+        for test in tests:
+            frmtString = FormatString(test[2])
+            self.assertEqual(frmtString.replace(test[0], test[1]), test[3])
 
     def test_snippet_holders(self):
         # Build snippet and snippet handler

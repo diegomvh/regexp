@@ -7,16 +7,7 @@ from unicodedata import decomposition
 from collections import namedtuple
 
 from .utils import six
-
-def asciify(string):
-    '''"ASCIIfy" a Unicode string by stripping all umlauts, tildes, etc.'''
-    def _asciify(char):
-        decomp = decomposition(char)
-        if decomp:
-            return chr(int(decomp.split()[0], 16)) 
-        else:
-            return char
-    return "".join([ _asciify(char) for char in string ])
+from .utils.text import asciify
 
 case_change = { 
     'none': 0, 
@@ -323,7 +314,7 @@ class VariableChangeType(object):
     __unicode__ = __str__
 
     def replace(self, memodict, holders = None, match = None, variables = None):
-        text = self.name
+        text = match.group(int(self.name))
         for key, function in transform_function.items():
             if self.change & key:
                 text = function(text)
