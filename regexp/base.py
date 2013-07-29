@@ -50,3 +50,5 @@ def compileRegexp(string, flags = []):
     if pattern is None:
         pattern = compileOnig(string, flags)
     return pattern
+
+escape = sre.escape

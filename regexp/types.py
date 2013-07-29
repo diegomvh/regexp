@@ -4,6 +4,8 @@ from __future__ import unicode_literals
 
 from collections import namedtuple
 
+from .base import escape
+
 from .utils import six
 from .utils.text import asciify
 
@@ -331,7 +333,7 @@ class VariableTransformationType(object):
     
     def __str__(self):
         return "${%s/%s/%s/%s}" % (self.name, 
-            self.pattern.pattern, 
+            self.pattern.pattern,
             "".join([ unicode(frmt) for frmt in self.format]),
             "".join(self.options))
     

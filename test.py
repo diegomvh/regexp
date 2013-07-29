@@ -6,7 +6,8 @@ import re
 import unittest
 
 from regexp.snippet import Snippet, Visitor, SnippetHandler
-from regexp.string import FormatString
+from regexp.string import String
+from regexp.symbol import SymbolTransformation
 
 class SnippetTests(unittest.TestCase):
     def setUp(self):
@@ -24,11 +25,11 @@ ${4/(\A\s*,\s*\Z)|,?\s*([A-Za-z_][a-zA-Z0-9_]*)\s*(=[^,]*)?(,\s*|$)/(?2:\t\tself
             self.assertEqual(unicode(Snippet(snippet)), snippet)
     
     def test_parse_format_string(self):
-        format_strings = [ "${0/class\s+([A-Za-z_][A-Za-z0-9_]*.+?\)?)(\:|$)/$1/g}",
-		  "${0/def\s+([A-Za-z_][A-Za-z0-9_]*\()(?:(.{,40}?\))|((.{40}).+?\)))(\:)/$1(?2:$2)(?3:$4…\))/g}",
+        format_strings = [ "${HOLA/class\s+([A-Za-z_][A-Za-z0-9_]*.+?\)?)(\:|$)/$1/g}",
+		  "${HOLA/def\s+([A-Za-z_][A-Za-z0-9_]*\()(?:(.{,40}?\))|((.{40}).+?\)))(\:)/$1(?2:$2)(?3:$4…\))/g}",
 		  ]
         for frmtString in format_strings:
-            self.assertEqual(unicode(FormatString(frmtString)), frmtString)
+            self.assertEqual(unicode(String(frmtString)), frmtString)
 
     def test_format_string(self):
         tests = [("æbleGRØD", ".+", "»${0:/upcase}«", "»ÆBLEGRØD«"),
@@ -39,13 +40,14 @@ ${4/(\A\s*,\s*\Z)|,?\s*([A-Za-z_][a-zA-Z0-9_]*)\s*(=[^,]*)?(,\s*|$)/(?2:\t\tself
             ("class ClassName(object):", ".+", '${0/class\s+([A-Za-z_][A-Za-z0-9_]*.+?\)?)(\:|$)/$1/g}', "ClassName(object)"),
             ("def method_name(arg1, arg2, arg3):", ".+", '${0/def\s+([A-Za-z_][A-Za-z0-9_]*\()(?:(.{,40}?\))|((.{40}).+?\)))(\:)/$1(?2:$2)(?3:$4…\))/g}', "method_name(arg1, arg2, arg3)")]
         for test in tests:
-            frmtString = FormatString(test[2])
+            frmtString = String(test[2])
             self.assertEqual(frmtString.replace(test[0], test[1]), test[3])
+
     # TODO: class
     def test_format_match(self):
         tests = [("storage.type.${0:/downcase}", "TODO", ".+", "storage.type.todo")]
         for test in tests:
-            frmtString = FormatString(test[0])
+            frmtString = String(test[0])
             self.assertEqual(frmtString.replace(test[1], test[2]), test[3])
             
     def test_snippet_holders(self):
